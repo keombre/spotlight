@@ -100,9 +100,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\search.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Resources\console.png" />
   </ItemGroup>
   <ItemGroup>

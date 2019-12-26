@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Management;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
@@ -88,7 +86,7 @@ namespace Spotlight
             }
         }
 
-        private List<string> GetOpenExplorers()
+        internal List<string> GetOpenExplorers()
         {
             SHDocVw.ShellWindows shellWindows = new SHDocVw.ShellWindows();
             Dictionary<IntPtr, string> windows = new Dictionary<IntPtr, string>();
@@ -96,8 +94,12 @@ namespace Spotlight
             {
                 string filename = Path.GetFileNameWithoutExtension(ie.FullName).ToLower();
 
-                if (filename.Equals("explorer"))
-                    windows.Add((IntPtr)ie.HWND, new Uri(ie.LocationURL).LocalPath);
+                try
+                {
+                    if (filename.Equals("explorer"))
+                        windows.Add((IntPtr)ie.HWND, new Uri(ie.LocationURL).LocalPath);
+                }
+                catch (UriFormatException) { };
             }
 
             List<string> ret = new List<string>();
