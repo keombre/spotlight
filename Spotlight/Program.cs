@@ -7,13 +7,19 @@ namespace Spotlight
 {
     class Program
     {
+        static Mutex mutex = new Mutex(true, "{d26b4955-4c78-4b8d-8fc0-947a2dd8703a}");
         public static void Main(string[] args)
         {
-            HotKeyManager.RegisterHotKey(Keys.Space, KeyModifiers.Control | KeyModifiers.Alt);
-            HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(HotKeyPressed);
-            App app = new App();
-            app.InitializeComponent();
-            app.Run();
+            if (mutex.WaitOne(TimeSpan.Zero, true))
+            {
+                HotKeyManager.RegisterHotKey(Keys.Space, KeyModifiers.Control | KeyModifiers.Alt);
+                HotKeyManager.HotKeyPressed += new EventHandler<HotKeyEventArgs>(HotKeyPressed);
+                App app = new App();
+                app.InitializeComponent();
+                app.Run();
+            }
+            else
+                MessageBox.Show("Spotlight is already running");
         }
 
         private static volatile Thread WindowThread;
