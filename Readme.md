@@ -1,10 +1,12 @@
 Windows Smart Run - Spotlight
 =================
-Same ar <kbd>Win</kbd>+<kbd>R</kbd> but smarter
+Same as <kbd>Win</kbd>+<kbd>R</kbd> but smarter
 
 Features
 --------
-Working directory for every process is set based on topmost currently open `explorer.exe` window. (I ♥ `user32.dll`)
+Working directory for every process is set based on topmost currently open `explorer.exe` window. (I ♥ `SHDocVw`).
+
+<kbd>Ctrl</kbd>+<kbd>Enter</kbd> launches command as admin.
 
 Usage
 -----
