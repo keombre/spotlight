@@ -96,6 +96,8 @@ namespace Spotlight.Windows
 
 		private void Window_KeyDown(object sender, KeyEventArgs e)
 		{
+			if (!query.IsEnabled)
+				return;
 			query.Foreground = Brushes.Black;
 
 			if (e.Key == Key.Enter)
@@ -106,12 +108,17 @@ namespace Spotlight.Windows
 
 		private void Validate(bool asAdmin)
 		{
-			if (parser.Invoke(new Response { type = Response.Type.Command, name = query.Text }, asAdmin))
+			query.IsEnabled = false;
+			Command? cmd = parser.Parse(query.Text, asAdmin);
+
+			if (cmd != null && parser.Invoke(cmd.Value))
 				Close();
 			else
 			{
+				query.IsEnabled = true;
 				query.Select(0, query.Text.Length);
 				query.Foreground = Brushes.Red;
+				query.Focus();
 			}
 		}
 

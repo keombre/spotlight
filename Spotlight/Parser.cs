@@ -1,32 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.OleDb;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Management;
+using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
 namespace Spotlight
 {
-    struct Response
+    struct Command
     {
-        public string name;
-        public string path;
-        public string fext;
-        public string size;
-        public Icon icon;
-
-        public Type type;
-
-        public enum Type
-        {
-            Command,
-            File
-        }
+        public string command;
+        public string[] args;
+        public bool admin;
     }
 
     class Parser
@@ -45,35 +34,49 @@ namespace Spotlight
             }
         }
 
-        internal bool Invoke(Response response, bool asAdmin)
+        internal Command? Parse(string text, bool asAdmin)
         {
-            switch (response.type)
+            if (text.Length == 0)
+                return null;
+
+            string[] cargs = text.Split(' ');
+
+            string command = cargs[0];
+            string[] args = cargs.Skip(1).ToArray();
+
+            XElement aliases = Config.Element("commands");
+            XElement alias = aliases.XPathSelectElement(string.Format(@"//alias[@short=""{0}""]", command));
+            if (alias != null)
+                command = alias.Value;
+
+            Command cmd = new Command
             {
-                case Response.Type.Command:
-                    return InvokeCommand(response.name, asAdmin);
-            }
-            return false;
+                admin = asAdmin,
+                command = command,
+                args = args
+            };
+
+            return cmd;
         }
 
-        private bool InvokeCommand(string name, bool asAdmin)
+        internal bool Invoke(Command cmd)
         {
-            XElement aliases = Config.Element("commands");
-            XElement alias = aliases.XPathSelectElement(string.Format(@"//alias[@short=""{0}""]", name));
-            if (alias != null)
-                name = alias.Value;
 
+            List<string> windows = GetOpenExplorers();
             try
             {
-                if (asAdmin)
+                Process proc;
+                proc = new Process();
+                proc.StartInfo.FileName = cmd.command;
+                proc.StartInfo.Arguments = string.Join(" ", cmd.args);
+                if (windows.Count > 0)
+                    proc.StartInfo.WorkingDirectory = windows[0];
+                if (cmd.admin)
                 {
-                    Process proc = new Process();
-                    proc.StartInfo.FileName = name;
                     proc.StartInfo.UseShellExecute = true;
                     proc.StartInfo.Verb = "runas";
-                    proc.Start();
                 }
-                else
-                    Process.Start(name);
+                proc.Start();
                 return true;
             }
             catch (Exception ex) when (
@@ -85,43 +88,49 @@ namespace Spotlight
             }
         }
 
-        internal List<Response> Search(string text)
+        private List<string> GetOpenExplorers()
         {
-            // autocomplete
-            // run commands
-            // use windows search
+            SHDocVw.ShellWindows shellWindows = new SHDocVw.ShellWindows();
+            Dictionary<IntPtr, string> windows = new Dictionary<IntPtr, string>();
+            foreach (SHDocVw.InternetExplorer ie in shellWindows)
+            {
+                string filename = Path.GetFileNameWithoutExtension(ie.FullName).ToLower();
 
-            return WindowsSearch(text);
+                if (filename.Equals("explorer"))
+                    windows.Add((IntPtr)ie.HWND, new Uri(ie.LocationURL).LocalPath);
+            }
+
+            List<string> ret = new List<string>();
+            foreach(IntPtr win in BuildZOrder())
+            {
+                if (windows.ContainsKey(win))
+                    ret.Add(windows[win]);
+            }
+
+            return ret;
         }
 
-        private List<Response> WindowsSearch(string text)
+        private List<IntPtr> BuildZOrder()
         {
-            List<Response> ret = new List<Response>();
-            string query = @"SELECT TOP 10 System.ItemNameDisplay, System.ItemPathDisplay, System.ItemType, System.Size, System.Search.Rank FROM SystemIndex WHERE System.ItemName LIKE '%{0}%'";
-            using (OleDbConnection conn = new OleDbConnection(@"Provider=Search.CollatorDSO;Extended Properties=""Application=Windows"""))
+            List<IntPtr> ret = new List<IntPtr>();
+
+            IntPtr win = GetWindow(GetForegroundWindow(), 0);
+            ret.Add(win);
+            while (win != IntPtr.Zero)
             {
-                conn.Open();
-                OleDbCommand command = new OleDbCommand(query, conn);
-
-                using (OleDbDataReader reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        Icon icon = Icon.ExtractAssociatedIcon(reader[1].ToString());
-                        ret.Add(new Response
-                        {
-                            name = reader[0].ToString(),
-                            path = reader[1].ToString(),
-                            fext = reader[2].ToString(),
-                            size = reader[3].ToString(),
-                            icon = icon,
-                            type = Response.Type.File
-                        });
-                    }
-                }
-
+                IntPtr tmp = GetWindow(win, 2);
+                if (tmp == win || ret.Contains(tmp))
+                    break;
+                ret.Add(tmp);
+                win = tmp;
             }
             return ret;
         }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
+
+        [DllImport("user32.dll")]
+        static extern IntPtr GetForegroundWindow();
     }
 }

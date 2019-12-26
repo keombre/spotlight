@@ -16,8 +16,8 @@
         Closing="Window_Closing">
     <Border BorderBrush="#aaa" Background="#aeee" BorderThickness="1" ClipToBounds="True">
         <Grid>
-            <Image Source="/Resources/search.png" UseLayoutRounding="True" Width="30" Height="30" Stretch="None" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
-            <TextBox Name="query" Height="28" Margin="50,10,20,0" VerticalAlignment="Top" BorderThickness="0" Background="Transparent" FontSize="21" FontFamily="Segoe UI Semilight" SelectionBrush="White"/>
+            <Image Source="/Resources/console.png" UseLayoutRounding="True" Width="30" Height="30" Stretch="None" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
+            <TextBox Name="query" Height="28" Margin="50,10,20,0" VerticalAlignment="Top" BorderThickness="0" Background="Transparent" FontSize="24" FontFamily="Consolas" SelectionBrush="White"/>
         </Grid>
     </Border>
 </Window>
