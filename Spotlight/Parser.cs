@@ -67,8 +67,12 @@ namespace Spotlight
                 proc = new Process();
                 proc.StartInfo.FileName = cmd.command;
                 proc.StartInfo.Arguments = string.Join(" ", cmd.args);
+                
                 if (windows.Count > 0)
                     proc.StartInfo.WorkingDirectory = windows[0];
+                else
+                    proc.StartInfo.WorkingDirectory = Environment.SystemDirectory;
+
                 if (cmd.admin)
                 {
                     proc.StartInfo.UseShellExecute = true;
