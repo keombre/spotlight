@@ -1,16 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace Spotlight.Windows
 {
@@ -24,9 +15,37 @@ namespace Spotlight.Windows
             InitializeComponent();
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private bool PreventClose = false;
+
+        private void Button_Settings(object sender, RoutedEventArgs e)
         {
-            Program.InvokeShutdown();
+            PreventClose = true;
+            Process.Start(Path.Combine(Directory.GetCurrentDirectory(), @"config.xml"));
+            Close();
+        }
+
+        private void Button_Close(object sender, RoutedEventArgs e)
+        {
+            PreventClose = true;
+            MessageBoxResult res = MessageBox.Show("Opravdu chcete ukončit Spotlight?", "Ukončit", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (res == MessageBoxResult.Yes)
+                Program.InvokeShutdown();
+            Close();
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            Rect desktopWorkingArea = SystemParameters.WorkArea;
+            Left = desktopWorkingArea.Right - Width;
+            Top = desktopWorkingArea.Bottom - Height;
+        }
+
+        private void Window_Deactivated(object sender, EventArgs e)
+        {
+            if (PreventClose)
+                Hide();
+            else
+                Close();
         }
     }
 }

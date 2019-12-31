@@ -25,19 +25,15 @@ namespace Spotlight
             }
             else
                 MessageBox.Show("Spotlight is already running");
-            Destroy();
         }
 
         internal static void InvokeShutdown()
         {
-            AppDispatcher.Invoke(() => app.Shutdown());
-            Destroy();
-        }
-
-        private static void Destroy()
-        {
             notifyIcon.Visible = false;
             notifyIcon.Dispose();
+
+            AppDispatcher.Invoke(() => app.Shutdown());
+            
             WindowThread?.Abort();
             PopupThread?.Abort();
         }

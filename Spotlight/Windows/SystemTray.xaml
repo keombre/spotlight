@@ -5,9 +5,18 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Spotlight.Windows"
         mc:Ignorable="d"
-        Title="SystemTray" Height="450" Width="800">
+        Title="SystemTray" Height="80" Width="200"
+        WindowStyle="None"
+        ShowInTaskbar="False"
+        Topmost="True"
+        Loaded="Window_Loaded"
+        Deactivated="Window_Deactivated"
+        ResizeMode="NoResize"
+        >
     <Grid>
-        <Button Content="Button" HorizontalAlignment="Left" Margin="219,152,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click"/>
-
+        <Image HorizontalAlignment="Left" Height="30" Margin="10,10,0,0" VerticalAlignment="Top" Width="30" Source="/Spotlight;component/Resources/console.png" Stretch="None"/>
+        <TextBlock HorizontalAlignment="Left" Margin="45,10,0,0" TextWrapping="Wrap" Text="Spotlight" VerticalAlignment="Top" FontFamily="Segoe UI Light" FontSize="20"/>
+        <Button Content="Nastavení" HorizontalAlignment="Left" VerticalAlignment="Top" Width="75" Margin="10,54,0,0" Click="Button_Settings"/>
+        <Button Content="Ukončit" HorizontalAlignment="Left" Margin="115,54,0,0" VerticalAlignment="Top" Width="75" Click="Button_Close"/>
     </Grid>
 </Window>
