@@ -104,13 +104,20 @@ namespace Spotlight.Windows
             query.Foreground = Brushes.Black;
 
             if (e.Key == Key.Enter)
-                Validate(Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl));
+            {
+                bool asAdmin = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+                if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+                    RunInConsole(asAdmin);
+                else
+                    Validate(asAdmin);
+            }
             else if (e.Key == Key.Escape)
                 Close();
         }
 
         private void Validate(bool asAdmin)
         {
+            HidePopupConsole();
             query.IsEnabled = false;
             Command? cmd = parser.Parse(query.Text, asAdmin);
 
@@ -118,6 +125,45 @@ namespace Spotlight.Windows
                 Close();
             else
             {
+                query.IsEnabled = true;
+                query.Select(0, query.Text.Length);
+                query.Foreground = Brushes.Red;
+                query.Focus();
+            }
+        }
+
+        private void PopupConsole()
+        {
+            Height = 390;
+            ConsoleOut.Visibility = Visibility.Visible;
+            ConsoleOut.Text = "";
+        }
+
+        private void HidePopupConsole()
+        {
+            Height = 60;
+            ConsoleOut.Visibility = Visibility.Collapsed;
+        }
+
+        private void RunInConsole(bool asAdmin)
+        {
+
+            query.IsEnabled = false;
+            Command? cmd = parser.Parse(query.Text, asAdmin);
+
+            string output = "";
+
+            if (cmd != null && parser.InvokeLocal(cmd.Value, ref output))
+            {
+                PopupConsole();
+                query.IsEnabled = true;
+                ConsoleOut.Text = output;
+                query.Text = "";
+                query.Focus();
+            } 
+            else
+            {
+                HidePopupConsole();
                 query.IsEnabled = true;
                 query.Select(0, query.Text.Length);
                 query.Foreground = Brushes.Red;

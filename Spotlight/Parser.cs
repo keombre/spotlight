@@ -138,5 +138,45 @@ namespace Spotlight
 
         [DllImport("user32.dll")]
         static extern IntPtr GetForegroundWindow();
+
+        internal bool InvokeLocal(Command cmd, ref string output)
+        {
+
+            List<string> windows = GetOpenExplorers();
+            try
+            {
+                Process proc;
+                proc = new Process();
+                proc.StartInfo.FileName = cmd.command;
+                proc.StartInfo.Arguments = string.Join(" ", cmd.args);
+
+                if (windows.Count > 0)
+                    proc.StartInfo.WorkingDirectory = windows[0];
+                else
+                    proc.StartInfo.WorkingDirectory = Environment.SystemDirectory;
+
+                proc.StartInfo.UseShellExecute = false;
+
+                if (cmd.admin)
+                    proc.StartInfo.Verb = "runas";
+
+                proc.StartInfo.RedirectStandardOutput = true;
+                proc.StartInfo.CreateNoWindow = true;
+
+                proc.Start();
+
+                output = proc.StandardOutput.ReadToEnd();
+                proc.WaitForExit();
+
+                return true;
+            }
+            catch (Exception ex) when (
+                ex is FileNotFoundException
+                || ex is System.ComponentModel.Win32Exception
+            )
+            {
+                return false;
+            }
+        }
     }
 }
