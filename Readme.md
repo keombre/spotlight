@@ -7,6 +7,7 @@ Features
 Working directory for every process is set based on topmost currently open `explorer.exe` window. (I ♥ `SHDocVw`).
 
 <kbd>Ctrl</kbd>+<kbd>Enter</kbd> launches command as admin.
+
 <kbd>Shift</kbd>+<kbd>Enter</kbd> launches command in build-in console.
 
 Usage
