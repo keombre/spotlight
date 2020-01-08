@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,6 +14,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace Spotlight.Windows
 {
@@ -55,6 +57,7 @@ namespace Spotlight.Windows
 
         private readonly Parser parser = new Parser();
         private bool IsClosing = false;
+        private volatile bool ConsoleRunning = false;
 
         public Search()
         {
@@ -97,8 +100,14 @@ namespace Spotlight.Windows
                 Path.Content = Environment.SystemDirectory;
         }
 
-        private void Window_KeyDown(object sender, KeyEventArgs e)
+        private async void Window_KeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Key == Key.Escape && ConsoleRunning)
+            {
+                parser.KillProcess();
+                return;
+            }
+
             if (!query.IsEnabled)
                 return;
             query.Foreground = Brushes.Black;
@@ -107,7 +116,7 @@ namespace Spotlight.Windows
             {
                 bool asAdmin = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
                 if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
-                    RunInConsole(asAdmin);
+                    await RunInConsole(asAdmin);
                 else
                     Validate(asAdmin);
             }
@@ -135,8 +144,11 @@ namespace Spotlight.Windows
         private void PopupConsole()
         {
             Height = 390;
-            ConsoleOut.Visibility = Visibility.Visible;
-            ConsoleOut.Text = "";
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                ConsoleOut.Visibility = Visibility.Visible;
+                ConsoleOut.Text = "";
+            }), DispatcherPriority.Render);
         }
 
         private void HidePopupConsole()
@@ -145,22 +157,26 @@ namespace Spotlight.Windows
             ConsoleOut.Visibility = Visibility.Collapsed;
         }
 
-        private void RunInConsole(bool asAdmin)
+        private void UpdateConsole(string text)
         {
+            ConsoleOut.Dispatcher.BeginInvoke(new Action(() => ConsoleOut.Text += text + "\n"), DispatcherPriority.Render);
+        }
 
+        private async Task RunInConsole(bool asAdmin)
+        {
             query.IsEnabled = false;
             Command? cmd = parser.Parse(query.Text, asAdmin);
 
-            string output = "";
+            Parser.CommandOutput output = new Parser.CommandOutput(UpdateConsole);
+            Parser.ProcessStart processStart = new Parser.ProcessStart(PopupConsole);
+            ConsoleRunning = true;
 
-            if (cmd != null && parser.InvokeLocal(cmd.Value, ref output))
+            if (cmd != null && await parser.InvokeLocal(cmd.Value, output, processStart))
             {
-                PopupConsole();
                 query.IsEnabled = true;
-                ConsoleOut.Text = output;
                 query.Text = "";
                 query.Focus();
-            } 
+            }
             else
             {
                 HidePopupConsole();
@@ -169,6 +185,7 @@ namespace Spotlight.Windows
                 query.Foreground = Brushes.Red;
                 query.Focus();
             }
+            ConsoleRunning = false;
         }
 
         private void Window_Deactivated(object sender, EventArgs e)

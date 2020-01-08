@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
@@ -18,6 +20,9 @@ namespace Spotlight
 
     class Parser
     {
+        internal delegate void CommandOutput(string arg);
+        internal delegate void ProcessStart();
+
         readonly string ConfigFile = Path.Combine(Directory.GetCurrentDirectory(), @"config.xml");
         readonly XElement Config;
 
@@ -63,11 +68,10 @@ namespace Spotlight
             List<string> windows = GetOpenExplorers();
             try
             {
-                Process proc;
                 proc = new Process();
                 proc.StartInfo.FileName = cmd.command;
                 proc.StartInfo.Arguments = string.Join(" ", cmd.args);
-                
+
                 if (windows.Count > 0)
                     proc.StartInfo.WorkingDirectory = windows[0];
                 else
@@ -107,7 +111,7 @@ namespace Spotlight
             }
 
             List<string> ret = new List<string>();
-            foreach(IntPtr win in BuildZOrder())
+            foreach (IntPtr win in BuildZOrder())
             {
                 if (windows.ContainsKey(win))
                     ret.Add(windows[win]);
@@ -133,50 +137,63 @@ namespace Spotlight
             return ret;
         }
 
+        private Process proc;
+
         [DllImport("user32.dll")]
         private static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
 
         [DllImport("user32.dll")]
         static extern IntPtr GetForegroundWindow();
 
-        internal bool InvokeLocal(Command cmd, ref string output)
+        internal void KillProcess()
         {
+            if (!proc.HasExited)
+                proc.Kill();
+        }
 
+        internal async Task<bool> InvokeLocal(Command cmd, CommandOutput commandOutput, ProcessStart processStart)
+        {
             List<string> windows = GetOpenExplorers();
+            string wd = windows.Count > 0 ? windows[0] : Environment.SystemDirectory;
+
+            bool ret = false;
+
             try
             {
-                Process proc;
-                proc = new Process();
-                proc.StartInfo.FileName = cmd.command;
-                proc.StartInfo.Arguments = string.Join(" ", cmd.args);
+                using (proc = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = cmd.command,
+                        Arguments = string.Join(" ", cmd.args),
+                        WorkingDirectory = wd,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardInput = false,
+                        WindowStyle = ProcessWindowStyle.Hidden,
+                        StandardOutputEncoding = Encoding.GetEncoding(852)
+                    }
+                })
+                {
+                    processStart();
+                    proc.OutputDataReceived += (sender, args) => commandOutput(args.Data);
 
-                if (windows.Count > 0)
-                    proc.StartInfo.WorkingDirectory = windows[0];
-                else
-                    proc.StartInfo.WorkingDirectory = Environment.SystemDirectory;
-
-                proc.StartInfo.UseShellExecute = false;
-
-                if (cmd.admin)
-                    proc.StartInfo.Verb = "runas";
-
-                proc.StartInfo.RedirectStandardOutput = true;
-                proc.StartInfo.CreateNoWindow = true;
-
-                proc.Start();
-
-                output = proc.StandardOutput.ReadToEnd();
-                proc.WaitForExit();
-
-                return true;
+                    proc.Start();
+                    proc.BeginOutputReadLine();
+                    await Task.Run(() => proc.WaitForExit());
+                    ret = proc.ExitCode == 0;
+                }
             }
             catch (Exception ex) when (
                 ex is FileNotFoundException
                 || ex is System.ComponentModel.Win32Exception
             )
             {
-                return false;
+                ret = false;
             }
+
+            return ret;
         }
     }
 }

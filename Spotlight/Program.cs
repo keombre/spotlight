@@ -24,7 +24,7 @@ namespace Spotlight
                 app.Run();
             }
             else
-                MessageBox.Show("Spotlight is already running");
+                MessageBox.Show("Spotlight je již spuštěn");
         }
 
         internal static void InvokeShutdown()
